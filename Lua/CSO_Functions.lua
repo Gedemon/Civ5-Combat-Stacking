@@ -103,7 +103,7 @@ function CombatResult (iAttackingPlayer, iAttackingUnit, attackerDamage, attacke
 				end
 			end
 			if bEscapeCity then
-				EscapeUnitsFromPlot(pDefendedPlot, true, 0, iAttackingPlayer)
+				--EscapeUnitsFromPlot(pDefendedPlot, true, 0, iAttackingPlayer)
 			end
 		end
 		
@@ -620,13 +620,14 @@ function CanRetreat(retreatPlot)
 		Dprint ("can't retreat, nil plot", g_DebugCombat);
 		return false
 	end
-	if retreatPlot:GetNumUnits() == 0 and not retreatPlot:IsImpassable() and not retreatPlot:IsWater() and not retreatPlot:IsCity() then
+	if retreatPlot:GetNumUnits() == 0 and not retreatPlot:IsImpassable() and not retreatPlot:IsWater() and not retreatPlot:IsCity() and not retreatPlot:IsMountain() then
 		return true
 	else
-		if retreatPlot:GetNumUnits() > 0 then Dprint ("can't retreat, another unit on plot", g_DebugCombat); end
+		if retreatPlot:GetNumUnits() > 0 then Dprint ("can't retreat, need an empty plot", g_DebugCombat); end
 		if retreatPlot:IsImpassable() then Dprint ("can't retreat, impassable plot", g_DebugCombat); end
 		if retreatPlot:IsWater() then Dprint ("can't retreat, water plot", g_DebugCombat); end
 		if retreatPlot:IsCity() then Dprint ("can't retreat, city plot", g_DebugCombat); end
+		if retreatPlot:IsMountain() then Dprint ("can't retreat, mountain plot", g_DebugCombat); end
 		return false
 	end
 end
@@ -646,7 +647,7 @@ function Retreat (iAttackingPlayer, iAttackingUnit, iDefendingPlayer, iDefending
 	local nextPlot, prevPlot = nil, nil
 	local attackDirection, prevDirection, nextDirection = 0, 0, 0
 	local firstPlot = Map.PlotDirection(defendingX, defendingY, firstDirection);
-	local rand = math.random( 1, 2 )
+	local rand = 1 --math.random( 1, 2 ) <- no randomness for MP
 	if rand == 1 then
 		nextPlot = Map.PlotDirection(defendingX, defendingY, secondDirection)
 		nextDirection = secondDirection
@@ -714,364 +715,17 @@ function Retreat (iAttackingPlayer, iAttackingUnit, iDefendingPlayer, iDefending
 end 
 
 --------------------------------------------------------------
--- Naval Counter-attack mod by Mylon (edited)
---------------------------------------------------------------
-
-function NavalCounterAttack(iAttackingPlayer, iAttackingUnit, attackerDamage, attackerFinalDamage, iAttackingUnitMaxHP, iDefendingPlayer, iDefendingUnit, defenderDamage, defenderFinalDamage, iDefendingUnitMaxHP)
-
-	-- First, let's make sure we're looking at a naval vs naval engagement
-	if iAttackingUnit > 0 and iDefendingUnit > 0 then
-	
-		local AttackingUnit = Players[iAttackingPlayer]:GetUnitByID( iAttackingUnit )
-		local DefendingUnit = Players[iDefendingPlayer]:GetUnitByID( iDefendingUnit )
-
-		if (AttackingUnit:GetDomainType() == DomainTypes.DOMAIN_SEA and DefendingUnit:GetDomainType() == DomainTypes.DOMAIN_SEA) then
-			if (AttackingUnit:GetBaseRangedCombatStrength() > 0 
-				and DefendingUnit:GetBaseRangedCombatStrength() > 0
-				and defenderFinalDamage < iDefendingUnitMaxHP -- defender must be alive to ripost !
-				and not AttackingUnit:IsHasPromotion(GameInfo.UnitPromotions.PROMOTION_INVISIBLE_SUBMARINE.ID) -- submarine does surprise attacks, don't counter
-				and not DefendingUnit:IsHasPromotion(GameInfo.UnitPromotions.PROMOTION_INVISIBLE_SUBMARINE.ID) -- Submarines does not counter-attack, they try to escape
-				) then
-			
-				--We're in business.  Let's launch a counter-attack.
-				Dprint("--------------------------", g_DebugCombat)
-				Dprint("Counter-attack", g_DebugCombat)
-				Dprint("Attacker : " .. AttackingUnit:GetName() , g_DebugCombat)
-				Dprint("Defender : " .. DefendingUnit:GetName() , g_DebugCombat)
-				-- if not Players[iDefendingPlayer]:IsTurnActive() then -- The defending unit couldn't belong to active turn player, if it is, then we're most likely catching the attacker receiving the counter-attack fire
-				if not g_NavalCounterAttack[DefendingUnit] then -- The defending unit couldn't have already attacked
-					Dprint("- defender had " .. DefendingUnit:MovesLeft() .. " moves left.", g_DebugCombat)
-					local movesLeft = DefendingUnit:MovesLeft() -- save defending unit moves
-					DefendingUnit:SetHasPromotion(GameInfo.UnitPromotions.PROMOTION_RANGED_PENALTY_20.ID, true)
-					DefendingUnit:RangeStrike( AttackingUnit:GetX(), AttackingUnit:GetY() )
-					--Now that the attack has been made, let's reset the defender's attack flag so it may defend from another attack.
-					DefendingUnit:SetMadeAttack(false)
-					DefendingUnit:SetHasPromotion(GameInfo.UnitPromotions.PROMOTION_RANGED_PENALTY_20.ID, false)
-					DefendingUnit:SetMoves(movesLeft) -- restore defending unit moves
-
-					g_NavalCounterAttack[AttackingUnit] = true -- mark the attacking unit so it can't counter-attack
-					g_NavalCounterAttack[DefendingUnit] = false -- mark the defending unit so it it may defend from another attack.
-				else
-					-- Dprint(DefendingUnit:GetName() .. " is in active turn, unable to counter-attack.", g_DebugCombat)
-					Dprint("- defender unit " .. DefendingUnit:GetName() .. " had already attacked.", g_DebugCombat)
-				end				
-				Dprint("--------------------------", g_DebugCombat)			
-			end
-		end
-	end
-end
---GameEvents.CombatResult.Add( NavalCounterAttack )
-
-
---------------------------------------------------------------
--- Counter-Fire
---------------------------------------------------------------
-
-function CounterFire(iAttackingPlayer, iAttackingUnit, attackerDamage, attackerFinalDamage, iAttackingUnitMaxHP, iDefendingPlayer, iDefendingUnit, defenderDamage, defenderFinalDamage, iDefendingUnitMaxHP,  iInterceptingPlayer, iInterceptingUnit, interceptorDamage, plotX, plotY)
-
-	-- First, let's make sure we're looking at a land ranged attack
-	if iAttackingUnit > 0 then
-		local AttackingUnit = Players[iAttackingPlayer]:GetUnitByID( iAttackingUnit )
-		local DefendingUnit = Players[iDefendingPlayer]:GetUnitByID( iDefendingUnit ) -- defending unit can be nil (city), but that shouldn't be a problem for the rest of the function...
-
-		if (AttackingUnit:GetDomainType() == DomainTypes.DOMAIN_LAND and AttackingUnit:IsRanged()) then
-			
-			local attackerPlot = AttackingUnit:GetPlot()	
-			local attX = attackerPlot:GetX()
-			local attY = attackerPlot:GetY()
-
-			local plot = GetPlot(plotX, plotY)
-			if attackerPlot:IsCity() then -- no counter attack on city...
-				return
-			end
-			
-			local counterFireUnit = GetCounterFireUnit(plot, AttackingUnit)
-			if not counterFireUnit then
-				return
-			end
-
-			if (counterFireUnit ~= DefendingUnit) or (defenderFinalDamage < iDefendingUnitMaxHP) then -- defender must be alive to ripost !
-				--We're in business.  Let's launch a counter-fire.
-				Dprint("--------------------------", g_DebugCombat)
-				Dprint("Counter-fire", g_DebugCombat)
-				Dprint("Attacker : " .. AttackingUnit:GetName() , g_DebugCombat)
-				Dprint("Defender : " .. counterFireUnit:GetName() , g_DebugCombat)
-
-				if not g_ArtilleryCounterFire[counterFireUnit] then -- We catch the attacking unit here if it tries to counter-fire against counter-fire...
-					Dprint("- Attacker unit had " .. AttackingUnit:MovesLeft() .. " moves left.", g_DebugCombat)
-					Dprint("- Defender unit had " .. counterFireUnit:MovesLeft() .. " moves left.", g_DebugCombat)
-					local defMovesLeft = counterFireUnit:MovesLeft()	-- save defending unit moves
-
-					-- Send alert messages for human player
-					if iAttackingPlayer == Game:GetActivePlayer() then
-						Dprint ("- Active player is attacking...", g_DebugCombat)
-						Dprint ("- Alert text for Counter Fire...", g_DebugCombat)
-						Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_YOU_RECEIVE_COUNTER_FIRE", AttackingUnit:GetNameKey(), counterFireUnit:GetNameKey()))
-					end
-					if iDefendingPlayer == Game:GetActivePlayer() then
-						Dprint ("- Active player is defending...", g_DebugCombat)
-						Dprint ("- Alert text for Counter Fire...", g_DebugCombat)
-						Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_YOU_USE_COUNTER_FIRE", counterFireUnit:GetNameKey(), AttackingUnit:GetNameKey()))
-					end
-										
-					g_ArtilleryCounterFire[AttackingUnit] = true	-- mark the attacking unit so it can't counter-fire against the counter-fire...
-					counterFireUnit:SetMadeAttack(false)			-- Make sure the defender can defend...
-					SetTemporaryBestDefender(AttackingUnit)			-- lower all combat value of units on the attacker plot except the attacking unit so it will be the one selected to defend against the counter-fire...										
-					counterFireUnit:RangeStrike( attX, attY )		-- Counter-Fire !!!					
-					RemoveTemporaryBestDefender(AttackingUnit)		-- restore the normal combat value of all unit on the attacker plot					
-					counterFireUnit:SetMadeAttack(false)			-- Now that the attack has been made, let's reset the defender's attack flag so it may defend from another attack.
-					counterFireUnit:SetMoves(defMovesLeft)			-- restore defending unit moves
-					g_ArtilleryCounterFire[counterFireUnit] = false -- unmark the defending unit so it it may defend from another attack.					
-					g_ArtilleryCounterFire[AttackingUnit] = false	-- unmark the attacking unit so it can counter-fire against supporting fire
-				else
-
-					Dprint("- ABORT Counter-Fire : defending unit " .. DefendingUnit:GetName() .. " is the initial attacker...", g_DebugCombat)
-				end				
-				Dprint("--------------------------", g_DebugCombat)			
-			end
-		end
-	end
-end
---GameEvents.CombatResult.Add( CounterFire )
-
-function GetCounterFireUnit(plot, AttackingUnit)
-	local unitCount = plot:GetNumUnits()
-	local counterFireUnit = nil
-	for i = 0, unitCount - 1, 1 do	
-    	local testUnit = plot:GetUnit(i)
-		if testUnit and IsCounterFire(testUnit, AttackingUnit) then
-			counterFireUnit = testUnit -- to do, check for better unit on the plot
-		end
-	end
-	return counterFireUnit
-end
-
-function IsCounterFire(unit, AttackingUnit)
-	if not unit:IsRanged() then 
-		return false
-	end
-	if GameInfo.UnitCombatInfos[unit:GetUnitCombatType()].Type == "UNITCOMBAT_SIEGE" then
-		if unit:CanRangeStrikeAt( AttackingUnit:GetX(), AttackingUnit:GetY() ) then
-			return true
-		end
-	end
-	if (GameInfo.UnitCombatInfos[unit:GetUnitCombatType()].Type == "UNITCOMBAT_ARCHER" and GameInfo.UnitCombatInfos[AttackingUnit:GetUnitCombatType()].Type == "UNITCOMBAT_ARCHER") then
-		if unit:CanRangeStrikeAt( AttackingUnit:GetX(), AttackingUnit:GetY() ) then
-			return true
-		end
-	end
-end
-
---------------------------------------------------------------
 -- First Strike
 --------------------------------------------------------------
-
-function TacticalAILaunchUnitAttack(iPlayer, iUnit, x, y)
-	local bDebug = true
-	local player = Players[iPlayer]
-	if not player then
-		return
-	end
-	local unit = player:GetUnitByID(iUnit)
-	if unit then
-		Dprint ("TacticalAILaunchUnitAttack for " .. tostring(unit:GetName()) .. " of player " .. tostring(player:GetName()) .. " at " .. tostring(x) .. "," .. tostring(y), bDebug)
-		FirstStrike(iPlayer, iUnit, x, y)
-	end
-end
---GameEvents.TacticalAILaunchUnitAttack.Add(TacticalAILaunchUnitAttack)
-
-function PushingMissionTo(iPlayer, iUnit, x, y, iMission)
-	local bDebug = true
-	-- Don't lose time if it's not a mission that can lead to combat...
-	if not (iMission == MissionTypes.MISSION_MOVE_TO or iMission == MissionTypes.MISSION_RANGE_ATTACK or iMission == MissionTypes.MISSION_AIRSTRIKE) then
-		return
-	end
-	local player = Players[iPlayer]
-	if not player then
-		return
-	end
-	local unit = player:GetUnitByID(iUnit)
-	if unit then
-		Dprint ("Pushing Mission (type=".. iMission ..") for " .. tostring(unit:GetName()) .. " of player " .. tostring(player:GetName()) .. " to " .. tostring(x) .. "," .. tostring(y), bDebug)
-		local plot = GetPlot(x,y)
-		if plot:IsVisibleEnemyDefender(unit) or plot:IsEnemyCity(unit) then
-			FirstStrike(iPlayer, iUnit, x, y)
-		end
-	end
-end
---GameEvents.PushingMissionTo.Add(PushingMissionTo)
-
-function FirstStrike(iPlayer, iUnit, x, y, iMission)
-	local bDebug = true
-	local player = Players[iPlayer]
-	local attackingUnit = player:GetUnitByID(iUnit)
-	local attackerPlot = attackingUnit:GetPlot()	
-	local attX = attackerPlot:GetX()
-	local attY = attackerPlot:GetY()
-	local defenderPlot = GetPlot(x,y)	
-
-	Dprint ("Check for First Strike before attack of " .. tostring(attackingUnit:GetName()) .. " of player " .. tostring(player:GetName()) .. " against " .. tostring(x) .. "," .. tostring(y), bDebug)
-
-	local offensiveFirstStrikeUnit = nil
-	local DefensiveFirstStrikeUnit = nil
-	if not attackingUnit:IsRanged() and attackingUnit:GetDomainType() == DomainTypes.DOMAIN_LAND then -- this is a land melee attack
-		-- Offensive strike
-		offensiveFirstStrikeUnit = GetOffensiveFirstStrikeUnit(attackerPlot)
-		if offensiveFirstStrikeUnit and not g_OffensiveFirstStrike[offensiveFirstStrikeUnit] then -- Support one attack per turn
-		
-			Dprint("--------------------------", g_DebugCombat)
-			Dprint("Offensive Support Fire", g_DebugCombat)
-			Dprint("Support unit : " .. offensiveFirstStrikeUnit:GetName() , g_DebugCombat)
-			Dprint("- Support unit had " .. offensiveFirstStrikeUnit:MovesLeft() .. " moves left.", g_DebugCombat)		
-			
-			local bestDefender = GetBestDefender(defenderPlot, attackingUnit)	-- try to find which unit the melee unit is attacking
-
-			-- Send alert messages for human player
-			if iPlayer == Game:GetActivePlayer() then
-				Dprint ("- Active player is attacking...", g_DebugCombat)
-				Dprint ("- Alert text for Offensive Support Fire...", g_DebugCombat)
-				Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_YOU_GET_OFFENSIVE_SUPPORT", offensiveFirstStrikeUnit:GetNameKey(), attackingUnit:GetNameKey()))
-			end
-			if (bestDefender and bestDefender:GetOwner() == Game:GetActivePlayer()) or (defenderPlot:IsCity() and defenderPlot:GetOwner() == Game:GetActivePlayer()) then
-				Dprint ("- Active player is defending...", g_DebugCombat)
-				Dprint ("- Alert text for Offensive Support Fire...", g_DebugCombat)
-				Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_ENEMY_GET_OFFENSIVE_SUPPORT", offensiveFirstStrikeUnit:GetNameKey(), attackingUnit:GetNameKey()))
-			end
-
-			local movesLeft = offensiveFirstStrikeUnit:MovesLeft()				-- save unit moves
-			local bAttackLeft = not offensiveFirstStrikeUnit:IsOutOfAttacks()	-- save attack state
-			offensiveFirstStrikeUnit:SetMoves(MOVE_DENOMINATOR)					-- give one free move for attack
-			offensiveFirstStrikeUnit:SetMadeAttack(false)						-- give free attack
-			if bestDefender then SetTemporaryBestDefender(bestDefender)	end		-- lower all combat value of units on the attacked plot except the attacked unit (bestDefender) so it will be the one selected to defend against the support-fire...
-			offensiveFirstStrikeUnit:RangeStrike( x, y )						-- Supporting Fire !!!			
-			if bestDefender then RemoveTemporaryBestDefender(bestDefender)	end	-- restore the normal combat value of all unit on the defended plot
-			offensiveFirstStrikeUnit:SetMoves(movesLeft)						-- restore unit moves			
-			offensiveFirstStrikeUnit:SetMadeAttack(not bAttackLeft)				-- restore attack state
-			g_OffensiveFirstStrike[offensiveFirstStrikeUnit] = true				-- mark this unit to not attack again. To Do : set this in unit global table, use a number, allow multiple support per turn...
-			g_ArtilleryCounterFire[offensiveFirstStrikeUnit] = true				-- mark this unit so it can't counter-fire if the defender use counterpreparation (defensive support)...
-			
-		end
-
-		-- Defensive strike		
-		if not attackerPlot:IsCity() then -- no defensive strike against city...
-
-			DefensiveFirstStrikeUnit = GetDefensiveFirstStrikeUnit(defenderPlot)
-			if DefensiveFirstStrikeUnit and not g_DefensiveFirstStrike[DefensiveFirstStrikeUnit] then -- Support one defense per turn
-	
-				Dprint("--------------------------", g_DebugCombat)
-				Dprint("Defensive Support Fire", g_DebugCombat)
-				Dprint("Support unit : " .. DefensiveFirstStrikeUnit:GetName() , g_DebugCombat)				
-				Dprint("- Support unit had " .. DefensiveFirstStrikeUnit:MovesLeft() .. " moves left.", g_DebugCombat)
-
-				-- Send alert messages for human player
-				if iPlayer == Game:GetActivePlayer() then
-					Dprint ("- Active player is attacking...", g_DebugCombat)
-					Dprint ("- Alert text for Defensive Support Fire...", g_DebugCombat)
-					Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_ENEMY_GET_DEFENSIVE_SUPPORT", DefensiveFirstStrikeUnit:GetNameKey(), attackingUnit:GetNameKey()))
-				end
-				if DefensiveFirstStrikeUnit:GetOwner() == Game:GetActivePlayer() then
-					Dprint ("- Active player is defending...", g_DebugCombat)
-					Dprint ("- Alert text for Defensive Support Fire...", g_DebugCombat)
-					Events.GameplayAlertMessage(Locale.ConvertTextKey("TXT_KEY_MISC_YOU_GET_DEFENSIVE_SUPPORT", DefensiveFirstStrikeUnit:GetNameKey(), attackingUnit:GetNameKey()))
-				end
-			
-				local iRangePromotion = GameInfo.UnitPromotions.PROMOTION_FIRST_STRIKE_RANGE_BONUS.ID
-				local movesLeft = DefensiveFirstStrikeUnit:MovesLeft()				-- save unit moves
-				local bNoAttackLeft = DefensiveFirstStrikeUnit:IsOutOfAttacks()		-- save attack status
-				DefensiveFirstStrikeUnit:SetMoves(MOVE_DENOMINATOR)					-- Give one free move for attack
-				DefensiveFirstStrikeUnit:SetMadeAttack(false)						-- Make sure it can attack
-				DefensiveFirstStrikeUnit:SetHasPromotion(iRangePromotion, true)		-- give temporary promotion so that 0 range units can strike
-				SetTemporaryBestDefender(attackingUnit)								-- mark the attacking unit so it will be the one selected to defend against the support-fire...
-				DefensiveFirstStrikeUnit:RangeStrike(attX, attY)					-- Supporting-Fire !!!
-				RemoveTemporaryBestDefender(attackingUnit)							-- remove the "forced best defender" mark on the attacking unit
-				DefensiveFirstStrikeUnit:SetMoves(movesLeft)						-- restore unit moves			
-				DefensiveFirstStrikeUnit:SetMadeAttack(bNoAttackLeft)				-- restore attack status
-				DefensiveFirstStrikeUnit:SetHasPromotion(iRangePromotion, false)	-- remove temporary promotion
-
-				-- illimited defensive support ?
-				--g_DefensiveFirstStrike[DefensiveFirstStrikeUnit] = true -- mark this unit to not attack again. To Do : set this in unit global table, use a number, allow multiple support per turn...
-			end
-		end
-		if offensiveFirstStrikeUnit then
-			g_ArtilleryCounterFire[offensiveFirstStrikeUnit] = true	-- unmark this unit so it can counter-fire in next battles...
-		end
-	end
-end
-
-function GetOffensiveFirstStrikeUnit(plot)
-	local unitCount = plot:GetNumUnits()
-	local firstStrikeUnit = nil
-	for i = 0, unitCount - 1, 1 do	
-    	local testUnit = plot:GetUnit(i)
-		if testUnit and IsOffensiveFirstStrike(testUnit) then
-			firstStrikeUnit = testUnit -- to do : get the best
-		end
-	end
-	return firstStrikeUnit
-end
-
-function IsOffensiveFirstStrike(unit)
-	if unit:IsMustSetUpToRangedAttack() and not unit:IsSetUpForRangedAttack() then
-		return false
-	end
-	return (GameInfo.UnitCombatInfos[unit:GetUnitCombatType()].Type == "UNITCOMBAT_SIEGE")
-end
-
-function GetDefensiveFirstStrikeUnit(plot)
-	local unitCount = plot:GetNumUnits()
-	local firstStrikeUnit = nil
-	for i = 0, unitCount - 1, 1 do	
-    	local testUnit = plot:GetUnit(i)
-		if testUnit and IsDefensiveFirstStrike(testUnit) then
-			firstStrikeUnit = testUnit -- to do: get the best
-		end
-	end
-	return firstStrikeUnit
-end
-
-function IsDefensiveFirstStrike(unit)
-	if unit:IsMustSetUpToRangedAttack() and not unit:IsSetUpForRangedAttack() then
-		return false
-	end
-	return (GameInfo.UnitCombatInfos[unit:GetUnitCombatType()].Type == "UNITCOMBAT_SIEGE") or (GameInfo.UnitCombatInfos[unit:GetUnitCombatType()].Type == "UNITCOMBAT_ARCHER")
-end
-
-
-function SetTemporaryBestDefender(unit)	
-	local bDebug = true
-	Dprint("    - Set ("..tostring(unit:GetName())..") as best defender on plot ".. unit:GetX() ..",".. unit:GetY(), bDebug)
-	Dprint("    - Moves Left = ".. unit:MovesLeft(), bDebug)
-	unit:SetMoves(unit:MovesLeft() + MOVE_DENOMINATOR) -- DLL won't pick immobile unit as BestDefender... 
-	Dprint("    - Moves Left with bonus added = ".. unit:MovesLeft(), bDebug)
-	unit:SetMarkedBestDefender(true)
-end
-
-
-function RemoveTemporaryBestDefender(unit)
-	local bDebug = true
-	Dprint("    - Unset ("..tostring(unit:GetName())..") as best defender on plot ".. unit:GetX() ..",".. unit:GetY(), bDebug)
-	Dprint("    - Moves Left = ".. unit:MovesLeft(), bDebug)
-	unit:SetMoves(unit:MovesLeft() - MOVE_DENOMINATOR) -- We had given this in SetTemporaryBestDefender()... 
-	Dprint("    - Moves Left with bonus removed = ".. unit:MovesLeft(), bDebug)
-	unit:SetMarkedBestDefender(false)
-end
-
-
-function GetBestDefender(plot, unit)
-	local unitCount = plot:GetNumUnits()
-	local bestDefender = nil
-	for i = 0, unitCount - 1, 1 do	
-    	local testUnit = plot:GetUnit(i)
-		if testUnit and testUnit:IsBetterDefenderThan(bestDefender, unit) then
-			bestDefender = testUnit
-		end
-	end
-	return bestDefender
-end
+-- (now handled in the DLL code)
 
 function ReinitUnits(playerID)
 	local player = Players[playerID]
 	if player and player:IsAlive() then
+	
+		Dprint ("ReinitUnits for " .. tostring(player:GetName()), bDebug)
+		Dprint("-------------------------------------", bDebug)
+	
 		for unit in player:Units() do
 			local unitType = unit:GetUnitType()
 			if unit:IsMarkedBestDefender() then
@@ -1081,6 +735,7 @@ function ReinitUnits(playerID)
 		end
 	end
 end
+
 
 
 --------------------------------------------------------------
@@ -1150,5 +805,12 @@ end
 function InitializeCitiesStackingLimit()
 	for iPlayer = 0, GameDefines.MAX_PLAYERS-1 do
 		SetPlayerCitiesStackingLimit(iPlayer)
+	end
+end
+
+
+function InitializePlayerUnits()
+	for iPlayer = 0, GameDefines.MAX_PLAYERS-1 do
+		ReinitUnits(iPlayer)
 	end
 end

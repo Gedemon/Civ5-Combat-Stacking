@@ -87,6 +87,7 @@ function OnLoading()
 	--
 	ShareGlobalTables()
 	InitializeCitiesStackingLimit()
+	InitializePlayerUnits()
 	--NewTurnSummary()
 end
 

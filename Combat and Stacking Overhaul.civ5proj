@@ -54,6 +54,11 @@
         <Type>UpdateDatabase</Type>
         <FileName>XML/x-Texts.xml</FileName>
       </Action>
+      <Action>
+        <Set>OnModActivated</Set>
+        <Type>UpdateDatabase</Type>
+        <FileName>SQL/99-Triggers.sql</FileName>
+      </Action>
     </ModActions>
     <ModContent>
       <Content>
@@ -69,6 +74,15 @@
         <FileName>Lua/ShareData.lua</FileName>
       </Content>
     </ModContent>
+    <ModDependencies>
+      <Association xmlns="">
+        <Type>Mod</Type>
+        <Name>R.E.D. DLL</Name>
+        <Id>2896c6d4-0273-4527-813b-b9ab58f0b95e</Id>
+        <MinVersion>8</MinVersion>
+        <MaxVersion>999</MaxVersion>
+      </Association>
+    </ModDependencies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Default' ">
     <OutputPath>.</OutputPath>
@@ -124,6 +138,10 @@
       <ImportIntoVFS>False</ImportIntoVFS>
     </Content>
     <Content Include="SQL\1-AlterTables.sql">
+      <SubType>Lua</SubType>
+      <ImportIntoVFS>False</ImportIntoVFS>
+    </Content>
+    <Content Include="SQL\99-Triggers.sql">
       <SubType>Lua</SubType>
       <ImportIntoVFS>False</ImportIntoVFS>
     </Content>

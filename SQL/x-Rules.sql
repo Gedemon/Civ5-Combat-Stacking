@@ -5,11 +5,9 @@
 
 */
 
-
-
------------------------------------------------
+--------------------------------------------------------------------------------------------
 -- DLL Stacking setup
------------------------------------------------
+--------------------------------------------------------------------------------------------
 
 /* Worker as a separate stacking class, will stack with settlers, great people and military units */
 UPDATE Units SET StackClass ='WORKER' WHERE Type = 'UNIT_WORKER';
@@ -36,8 +34,9 @@ UPDATE Units SET StackClass ='SUPPORT' WHERE Type = 'UNIT_ASSYRIAN_SIEGE_TOWER';
 /* Helicopter class */
 UPDATE Units SET StackClass ='HELICOPTER' WHERE CombatClass = 'UNITCOMBAT_HELICOPTER';
 
-/* Ranged Sea class */
-UPDATE Units SET StackClass ='NAVALRANGED' WHERE CombatClass = 'UNITCOMBAT_NAVALRANGED';
+/* Sea classes */
+UPDATE Units SET StackClass ='NAVAL' WHERE CombatClass = 'UNITCOMBAT_NAVALRANGED' OR  CombatClass = 'UNITCOMBAT_NAVALMELEE';
+UPDATE Units SET StackClass ='SUBMARINE' WHERE CombatClass = 'UNITCOMBAT_SUBMARINE';
 
 /* City stacking limits */
 UPDATE Defines SET Value = 1		WHERE Name = 'CITY_LAND_UNIT_LIMIT';
@@ -45,9 +44,29 @@ UPDATE Defines SET Value = 1		WHERE Name = 'CITY_SEA_UNIT_LIMIT';
 UPDATE Defines SET Value = 3		WHERE Name = 'CITY_AIR_UNIT_LIMIT';
 
 
------------------------------------------------
+--------------------------------------------------------------------------------------------
+-- DLL Combat setup
+--------------------------------------------------------------------------------------------
+
+/* Support Fire Only classes (can't do normal ranged attack) */
+UPDATE Units SET OnlySupportFire = 1 WHERE Class = 'UNITCLASS_GATLINGGUN' OR Class = 'UNITCLASS_MACHINE_GUN' OR Class = 'UNITCLASS_BAZOOKA' OR Class = 'UNITCLASS_VOLLEY_GUN';
+
+/* Offensive Support Fire */
+UPDATE Units SET OffensiveSupportFire = 1 WHERE CombatClass = 'UNITCOMBAT_SIEGE' OR CombatClass = 'UNITCOMBAT_NAVALRANGED' OR Class = 'UNITCLASS_ROMAN_BALLISTA' OR Class = 'UNITCLASS_BAZOOKA';-- OR Class = 'UNITCLASS_GATLINGGUN' OR Class = 'UNITCLASS_MACHINE_GUN' OR Class = 'UNITCLASS_VOLLEY_GUN';
+
+/* Defensive Support Fire */
+UPDATE Units SET DefensiveSupportFire = 1 WHERE CombatClass = 'UNITCOMBAT_SIEGE' OR CombatClass = 'UNITCOMBAT_ARCHER' OR CombatClass = 'UNITCOMBAT_NAVALRANGED';
+
+/* Counter Fire */
+UPDATE Units SET CounterFire = 1 WHERE (CombatClass = 'UNITCOMBAT_SIEGE' OR CombatClass = 'UNITCOMBAT_NAVALRANGED' OR CombatClass = 'UNITCOMBAT_ARCHER') AND NOT (Class = 'UNITCLASS_GATLINGGUN' OR Class = 'UNITCLASS_MACHINE_GUN' OR Class = 'UNITCLASS_BAZOOKA' OR Class = 'UNITCLASS_VOLLEY_GUN');
+
+/* Counter Fire only against same combat class */
+UPDATE Units SET CounterFireSameCombatType = 1 WHERE CombatClass = 'UNITCOMBAT_ARCHER' AND Class <> 'UNITCLASS_ROMAN_BALLISTA';
+
+
+--------------------------------------------------------------------------------------------
 -- Lua Stacking setup (won't do anything without the corresponding Lua functions)
------------------------------------------------
+--------------------------------------------------------------------------------------------
 
 
 /* Land stacking */
@@ -71,7 +90,11 @@ UPDATE Buildings SET SeaStackChange = '2' WHERE BuildingClass = 'BUILDINGCLASS_M
 -- Units Rules
 --------------------------------------------------------------------------------------------
 
+/* We can have 4 to 6 units on each plot, so raise a bit the number of units on the map... */
 UPDATE Units SET Cost = Cost/2 WHERE Domain = 'DOMAIN_LAND' AND Combat > 0;
+
+/* Allow healing in stacks... */
+UPDATE UnitPromotions SET SameTileHealChange = AdjacentTileHealChange WHERE AdjacentTileHealChange > 0; -- maybe something specific in case we want to have different promotions...
 
 --------------------------------------------------------------------------------------------
 -- Game Defines

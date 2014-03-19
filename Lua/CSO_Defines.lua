@@ -56,6 +56,13 @@ GRDINTERCEPT =	10	-- Interception by ground (sea, land) unit
 
 
 ----------------------------------------------------------------------------------------------------------------------------
---Moves
+-- Moves
 ----------------------------------------------------------------------------------------------------------------------------
 MOVE_DENOMINATOR = GameDefines.MOVE_DENOMINATOR
+
+----------------------------------------------------------------------------------------------------------------------------
+-- Rules
+----------------------------------------------------------------------------------------------------------------------------
+MIN_HP_LEFT_BEFORE_ESCAPING_CITY	= 4 -- under that value of predicted HP left to a city after a combat that is starting, units will try to escape a city
+MAX_PERCENT_HP_LOSS_ESCAPE			= 50 -- Maximum percentage of remaining HP loss when retreating from a plot.
+MIN_PERCENT_HP_LOSS_ESCAPE			= 25 -- Minimum percentage of remaining HP loss when retreating from a plot.

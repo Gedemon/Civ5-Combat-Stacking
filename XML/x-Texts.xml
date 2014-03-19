@@ -73,27 +73,6 @@
 			<Text>An enemy {@1_UnitName} bombarded your city of {@2_EnUName}! ([COLOR_NEGATIVE_TEXT]{3_Damage}[ENDCOLOR] damage)</Text>
 		</Row>
 
-		<Row Tag="TXT_KEY_MISC_YOU_RECEIVE_COUNTER_FIRE">
-			<Text>Your {@1_UnitName} is receiving [COLOR_NEGATIVE_TEXT]Counter-Fire[ENDCOLOR] from an enemy {@2_EnUName}!</Text>
-		</Row>
-		<Row Tag="TXT_KEY_MISC_YOU_USE_COUNTER_FIRE">
-			<Text>Your {@1_UnitName} was able to use [COLOR_POSITIVE_TEXT]Counter-Fire[ENDCOLOR] against an enemy {@2_EnUName}!</Text>
-		</Row>
-
-		<Row Tag="TXT_KEY_MISC_YOU_GET_OFFENSIVE_SUPPORT">
-			<Text>Your {@1_UnitName} was able to provide [COLOR_POSITIVE_TEXT]Preparation Fire[ENDCOLOR] for your {@2_EnUName} attack!</Text>
-		</Row>
-		<Row Tag="TXT_KEY_MISC_ENEMY_GET_OFFENSIVE_SUPPORT">
-			<Text>An enemy {@1_UnitName} was able to provide [COLOR_NEGATIVE_TEXT]Preparation Fire[ENDCOLOR] for his {@2_EnUName} attack!</Text>
-		</Row>
-
-		<Row Tag="TXT_KEY_MISC_ENEMY_GET_DEFENSIVE_SUPPORT">
-			<Text>An enemy {@1_UnitName} was able to provide [COLOR_NEGATIVE_TEXT]Counter-Preparation Fire[ENDCOLOR] against your {@2_EnUName} attack!</Text>
-		</Row>
-		<Row Tag="TXT_KEY_MISC_YOU_GET_DEFENSIVE_SUPPORT">
-			<Text>Your {@1_UnitName} was able to provide [COLOR_POSITIVE_TEXT]Counter-Preparation Fire[ENDCOLOR] against an enemy {@2_EnUName} attack!</Text>
-		</Row>
-
 		<Replace Tag="TXT_KEY_MISC_YOU_ATTACK_BY_AIR">
 			<Text>Your {@1_UnitName} ([COLOR_NEGATIVE_TEXT]{3_Damage}[ENDCOLOR] damage) bombarded an enemy {@2_EnUName} ([COLOR_POSITIVE_TEXT]{4_Damage}[ENDCOLOR] damage)!</Text>
 		</Replace>
