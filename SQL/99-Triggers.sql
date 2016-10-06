@@ -13,7 +13,7 @@ AFTER INSERT ON Units
 BEGIN
 
 	/* "Archer" units can't attack ships */
-	UPDATE Units SET RangeAttackOnlyInDomain ='1' WHERE CombatClass ='UNITCOMBAT_ARCHER';
+	UPDATE Units SET RangeAttackOnlyInDomain ='1' WHERE CombatClass ='UNITCOMBAT_ARCHER' OR CombatClass ='UNITCOMBAT_RECON';
 
 	/* Support class */
 	UPDATE Units SET StackClass ='SUPPORT' WHERE CombatClass = 'UNITCOMBAT_ARCHER';

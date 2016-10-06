@@ -14,12 +14,14 @@
 
 /* Range = 1 for all Ranged Land/Sea unit */
 UPDATE Units SET Range ='1' WHERE RangedCombat > 0 AND (Domain = 'DOMAIN_LAND' OR Domain = 'DOMAIN_SEA');
+UPDATE Units SET Range ='1' WHERE Class = 'UNITCLASS_ANTI_AIRCRAFT_GUN';
 
-/* Range = 2 for some intercepting units */
+/* Range = 2 for some units */
 UPDATE Units SET Range ='2' WHERE Class = 'UNITCLASS_MISSILE_DESTROYER' OR Class = 'UNITCLASS_MISSILE_CRUISER' OR Class = 'UNITCLASS_MOBILE_SAM'; -- to do: try to set missile attack animation only for the Missile Cruiser
+UPDATE Units SET Range ='2' WHERE Class = 'UNITCLASS_ROCKET_ARTILLERY';
 
 /* "Archer" units can't attack ships */
-UPDATE Units SET RangeAttackOnlyInDomain ='1' WHERE CombatClass ='UNITCOMBAT_ARCHER';
+UPDATE Units SET RangeAttackOnlyInDomain ='1' WHERE CombatClass ='UNITCOMBAT_ARCHER' OR CombatClass ='UNITCOMBAT_RECON';
 
 
 -----------------------------------------------

@@ -109,6 +109,14 @@ UPDATE Defines SET Value = 1		WHERE Name = 'CITY_ATTACK_RANGE';
 /* Units HitPoints */
 --UPDATE Defines SET Value = 250		WHERE Name = 'MAX_HIT_POINTS'; -- WTF ? can't melee attack if an unit as more than 100 damage ??? where is that hardcoded ??? switch to change to damage values then...
 
+
+--------------------------------------------------------------------------------------------
+-- Heal & Damage
+--------------------------------------------------------------------------------------------
+
+/* Citadel's Damage */
+UPDATE Improvements SET NearbyEnemyDamage = 20		WHERE Type = 'IMPROVEMENT_CITADEL';
+
 /* Heal Rates */
 UPDATE Defines SET Value = 5		WHERE Name = 'ENEMY_HEAL_RATE';		-- default = 10
 UPDATE Defines SET Value = 10		WHERE Name = 'NEUTRAL_HEAL_RATE';	-- default = 10
